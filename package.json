@@ -1,0 +1,29 @@
+{
+  "name": "tars-ui-tars-bridge",
+  "version": "0.1.0",
+  "description": "MCP Bridge for UI-TARS desktop automation client — connects TSG gateway to UI-TARS via Model Context Protocol",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": {
+    "tars-ui-tars-bridge": "dist/src/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --test dist/test/*.js",
+    "start": "node dist/index.js",
+    "lint": "echo 'lint: placeholder'"
+  },
+  "keywords": ["mcp", "ui-tars", "desktop-automation", "tars-secure-guard"],
+  "author": "TarsSecureGuard Team",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
