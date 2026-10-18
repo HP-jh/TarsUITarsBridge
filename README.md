@@ -75,3 +75,8 @@ In TSG gateway configuration, enable the bridge:
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE)
+
+## Changelog
+
+### v1.0.1
+- Version bump with stability improvements
