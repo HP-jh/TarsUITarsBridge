@@ -1,6 +1,6 @@
 /**
  * UI-TARS Bridge — MCP Tool Implementations
- * v0.1.0 MVP: mock UI-TARS endpoint for rapid iteration
+ * v0.3.0 — TSG gateway auto-include + health check + config validation
  */
 
 import type {
@@ -11,9 +11,14 @@ import type {
   BrowserOpenResult,
   UITarsConfig,
   Point,
+  HealthCheckResult,
+  TSGRegistryEntryResult,
+  ConfigValidateResult,
 } from "./types.js";
 
 const DEFAULT_TIMEOUT = 30000;
+const VERSION = "0.3.0";
+const START_TIME = Date.now();
 
 function validateCoordinates(p: Point): string | null {
   if (typeof p.x !== "number" || typeof p.y !== "number") {
@@ -122,4 +127,111 @@ export async function browserOpen(
   const err = validateUrl(url);
   if (err) return mkErr(err);
   return { success: true, url };
+}
+
+/* ── 6. health_check ── */
+export async function healthCheck(
+  config: UITarsConfig,
+  _args: Record<string, unknown>,
+): Promise<HealthCheckResult> {
+  const mode = config.endpoint ? "real" : "mock";
+  return {
+    success: true,
+    version: VERSION,
+    transport: "stdio",
+    mode,
+    endpointConfigured: !!config.endpoint,
+    timestamp: new Date().toISOString(),
+    uptimeMs: Date.now() - START_TIME,
+  };
+}
+
+/* ── 7. tsg_registry_entry ── */
+export async function tsgRegistryEntry(
+  config: UITarsConfig,
+  _args: Record<string, unknown>,
+): Promise<TSGRegistryEntryResult> {
+  const entry = {
+    name: "tars-ui-tars-bridge",
+    version: VERSION,
+    type: "mcp-bridge",
+    transport: "stdio",
+    autoInclude: true,
+    executable: "npx tars-ui-tars-bridge",
+    env: {
+      UI_TARS_ENDPOINT: config.endpoint || "",
+      UI_TARS_API_KEY: config.apiKey || "",
+      UI_TARS_MODEL: config.model || "ui-tars-1.5-7b",
+      UI_TARS_TIMEOUT_MS: String(config.timeoutMs || DEFAULT_TIMEOUT),
+    },
+    capabilities: ["screenshot", "click", "type", "scroll", "browser_open", "health_check", "tsg_registry_entry", "config_validate"],
+    healthCheck: {
+      tool: "health_check",
+      intervalSeconds: 60,
+    },
+  };
+
+  const yaml = `name: ${entry.name}
+version: ${entry.version}
+type: ${entry.type}
+transport: ${entry.transport}
+autoInclude: ${entry.autoInclude}
+executable: ${entry.executable}
+env:
+  UI_TARS_ENDPOINT: "${entry.env.UI_TARS_ENDPOINT}"
+  UI_TARS_API_KEY: "${entry.env.UI_TARS_API_KEY}"
+  UI_TARS_MODEL: "${entry.env.UI_TARS_MODEL}"
+  UI_TARS_TIMEOUT_MS: "${entry.env.UI_TARS_TIMEOUT_MS}"
+capabilities:
+${entry.capabilities.map((c) => `  - ${c}`).join("\n")}
+healthCheck:
+  tool: ${entry.healthCheck.tool}
+  intervalSeconds: ${entry.healthCheck.intervalSeconds}
+`;
+
+  return {
+    success: true,
+    registryJson: JSON.stringify(entry, null, 2),
+    registryYaml: yaml,
+  };
+}
+
+/* ── 8. config_validate ── */
+export async function configValidate(
+  config: UITarsConfig,
+  _args: Record<string, unknown>,
+): Promise<ConfigValidateResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (config.endpoint) {
+    const err = validateUrl(config.endpoint);
+    if (err) errors.push(`endpoint: ${err}`);
+  } else {
+    warnings.push("endpoint not set — running in mock mode");
+  }
+
+  if (config.apiKey && config.apiKey.length < 8) {
+    warnings.push("apiKey looks short (< 8 chars)");
+  }
+
+  if (config.timeoutMs !== undefined) {
+    if (config.timeoutMs < 1000) {
+      warnings.push("timeoutMs < 1000ms may be too aggressive");
+    }
+    if (config.timeoutMs > 300000) {
+      warnings.push("timeoutMs > 300000ms (5min) may be excessive");
+    }
+  }
+
+  if (config.model && config.model.length === 0) {
+    errors.push("model must not be empty");
+  }
+
+  return {
+    success: true,
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
 }

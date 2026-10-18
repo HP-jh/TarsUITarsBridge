@@ -1,6 +1,6 @@
 /**
  * UI-TARS Bridge — Core Types
- * v0.1.0 MVP
+ * v0.3.0 — TSG gateway auto-include + health check + config validation
  */
 
 export interface UITarsConfig {
@@ -49,9 +49,38 @@ export interface BrowserOpenResult {
   error?: string;
 }
 
+export interface HealthCheckResult {
+  success: boolean;
+  version: string;
+  transport: "stdio" | "http" | "dual";
+  mode: "mock" | "real";
+  endpointConfigured: boolean;
+  timestamp: string;
+  uptimeMs: number;
+  error?: string;
+}
+
+export interface TSGRegistryEntryResult {
+  success: boolean;
+  registryJson: string;
+  registryYaml: string;
+  error?: string;
+}
+
+export interface ConfigValidateResult {
+  success: boolean;
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  error?: string;
+}
+
 export type ToolResult =
   | ScreenshotResult
   | ClickResult
   | TypeResult
   | ScrollResult
-  | BrowserOpenResult;
+  | BrowserOpenResult
+  | HealthCheckResult
+  | TSGRegistryEntryResult
+  | ConfigValidateResult;

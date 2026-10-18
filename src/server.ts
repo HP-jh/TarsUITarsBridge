@@ -1,6 +1,6 @@
 /**
- * UI-TARS Bridge — MCP Server (stdio transport)
- * v0.1.0 MVP
+ * UI-TARS Bridge — MCP Server (stdio + HTTP dual transport)
+ * v0.3.0 — TSG gateway auto-include + health check + config validation
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -12,14 +12,23 @@ import {
   type TextContent,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { screenshot, click, typeText, scroll, browserOpen } from "./tools.js";
+import {
+  screenshot,
+  click,
+  typeText,
+  scroll,
+  browserOpen,
+  healthCheck,
+  tsgRegistryEntry,
+  configValidate,
+} from "./tools.js";
 import type { UITarsConfig } from "./types.js";
 
 export function createServer(config: UITarsConfig = {}): Server {
   const server = new Server(
     {
       name: "tars-ui-tars-bridge",
-      version: "0.1.0",
+      version: "0.3.0",
     },
     {
       capabilities: { tools: {} },
@@ -95,6 +104,30 @@ export function createServer(config: UITarsConfig = {}): Server {
           required: ["url"],
         },
       },
+      {
+        name: "health_check",
+        description: "Return bridge health status: version, transport mode, uptime, endpoint configuration",
+        inputSchema: {
+          type: "object" as const,
+          properties: {},
+        },
+      },
+      {
+        name: "tsg_registry_entry",
+        description: "Generate TSG gateway auto-include registry entry (JSON + YAML) for this bridge",
+        inputSchema: {
+          type: "object" as const,
+          properties: {},
+        },
+      },
+      {
+        name: "config_validate",
+        description: "Validate current UI-TARS configuration and report errors / warnings",
+        inputSchema: {
+          type: "object" as const,
+          properties: {},
+        },
+      },
     ],
   }));
 
@@ -118,6 +151,15 @@ export function createServer(config: UITarsConfig = {}): Server {
           break;
         case "browser_open":
           result = await browserOpen(config, args);
+          break;
+        case "health_check":
+          result = await healthCheck(config, args);
+          break;
+        case "tsg_registry_entry":
+          result = await tsgRegistryEntry(config, args);
+          break;
+        case "config_validate":
+          result = await configValidate(config, args);
           break;
         default:
           return {
